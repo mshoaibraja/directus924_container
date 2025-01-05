@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  directus:
+    image: directus/directus:9.24
+    container_name: ${STACK_PRFX}-directus
+    ports:
+      - "8055:8055"
+    volumes:
+      - ./uploads:/directus/uploads
+      - ./extensions:/directus/extensions
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - directus-network
+    restart: unless-stopped
+
+  database:
+    container_name: ${STACK_PRFX}-database
+    image: mysql:8.0
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    command: 
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+      - "--default-authentication-plugin=mysql_native_password"
+    env_file:
+      - .env
+    ports:
+      - "3306:3306"
+    networks:
+      - directus-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$$MYSQL_USER", "--password=$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+networks:
+  directus-network:
+    name: ${STACK_PRFX}-network
